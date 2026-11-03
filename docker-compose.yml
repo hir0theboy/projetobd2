@@ -1,0 +1,23 @@
+services:
+  db:
+    image: postgres:17
+    container_name: bd2_matricula
+    environment:
+      POSTGRES_USER: aluno
+      POSTGRES_PASSWORD: aluno123
+      POSTGRES_DB: matricula
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  cloudbeaver:
+    image: dbeaver/cloudbeaver:latest
+    ports:
+      - "8978:8978"
+    volumes:
+      - cbdata:/opt/cloudbeaver/workspace
+
+volumes:
+  pgdata:
+  cbdata:
