@@ -177,7 +177,12 @@ WHERE relname = 'tb_matricula'
 ORDER BY pg_relation_size(indexrelid) DESC;
 ```
 ```
-(colar aqui o resultado desta consulta)
+| A-Z indice | A-Z tamanho |
+| :--- | :--- |
+| **1** tb_matricula_id_turma_id_aluno_key | 2736 kB |
+| **2** tb_matricula_pkey | 2656 kB |
+| **3** ix_matricula_aluno | 1336 kB |
+| **4** ix_matricula_canceladas_data | 40 kB |
 ```
 
 **Explicação:** apenas cerca de 2% das matrículas são canceladas
