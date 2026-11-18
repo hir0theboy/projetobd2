@@ -29,6 +29,9 @@ Os autores e a frente de cada integrante estão em [`AUTORES.md`](AUTORES.md).
 | `03_views.sql` | 3 views e 1 materialized view de indicadores |
 | `04_carga_volume.sql` | Carga em volume (20 mil alunos, 120 mil matrículas) para medir índices |
 | `05_indices.sql` | 4 índices, sendo 1 parcial |
+| `06_transacoes.sql` | Anomalia da última vaga e duas correções (`FOR UPDATE` e `SERIALIZABLE`), com comparação |
+| `07_seguranca.sql` | Papéis, `GRANT`/`REVOKE` e row-level security |
+| `08_backup_restauracao.md` | Backup e restauração reproduzíveis do zero |
 | `evidencias_explain.md` | `EXPLAIN (ANALYZE, BUFFERS)` antes e depois de cada índice, com o ganho medido |
 | `AUTORES.md` | Autores e frente de cada integrante |
 
@@ -78,7 +81,7 @@ anônima). O comando `docker compose logs cloudbeaver` mostra o andamento.
 
 ### 3. Executar os scripts, na ordem
 
-Para **cada** script, de `01` a `05`:
+Para **cada** script, de `01` a `07`:
 
 1. Com a conexão selecionada, abra um **editor SQL novo** (botão **SQL** na barra superior).
 2. Abra o arquivo `.sql`, copie todo o conteúdo e cole no editor.
@@ -94,6 +97,8 @@ Confira o resumo que o CloudBeaver mostra ao final de cada um:
 | `03_views.sql` | sem erro (3 views, 1 materialized view e 1 índice único) |
 | `04_carga_volume.sql` | 11 comandos, 380.624 linhas atualizadas (leva cerca de 1 a 2 minutos) |
 | `05_indices.sql` | sem erro; a última consulta lista os 4 índices criados |
+| `06_transacoes.sql` | sem erro; cria as funções `matricular_ingenuo` e `matricular_com_lock` (os experimentos com duas sessões são manuais, veja o cabeçalho do arquivo) |
+| `07_seguranca.sql` | sem erro; cria 3 papéis, 4 usuários de demonstração e as políticas de RLS (os testes ficam comentados no fim do arquivo) |
 
 Se algum script falhar, rode `ROLLBACK;` sozinho no editor antes de tentar de novo (os
 scripts que alteram dados começam com `BEGIN`, e o erro deixa a transação aberta).
@@ -145,7 +150,7 @@ Os mesmos scripts podem ser executados direto pelo `psql` dentro do contêiner, 
 Em macOS, Linux ou Git Bash:
 
 ```bash
-for f in 01_ddl 02_carga 03_views 04_carga_volume 05_indices; do
+for f in 01_ddl 02_carga 03_views 04_carga_volume 05_indices 06_transacoes 07_seguranca; do
   docker compose cp $f.sql db:/tmp/$f.sql &&
   docker compose exec db psql -v ON_ERROR_STOP=1 -U aluno -d matricula -f /tmp/$f.sql || break
 done
@@ -195,23 +200,28 @@ Comandos úteis dentro do `psql`: `\dt` (tabelas), `\d tb_aluno` (estrutura de u
 | `ix_matricula_canceladas_data` (parcial) | 9,8 ms | 0,6 ms | 769 e 3 |
 | `ix_log_ocorrido_em` | 12,3 ms | 3,3 ms | 1125 e 84 |
 
-### 2. Transações e concorrência: em andamento
+### 2. Transações e concorrência: concluída
 
-A fazer: reprodução da anomalia na disputa pela última vaga, duas correções (bloqueio
-explícito e nível de isolamento) e comparação fundamentada entre as abordagens.
+- Anomalia da última vaga reproduzida na turma 99 (1 vaga): duas matrículas para uma vaga.
+- Correção 1, bloqueio explícito: `SELECT ... FOR UPDATE` na linha da turma.
+- Correção 2, nível de isolamento: transação `SERIALIZABLE` com retentativa em caso de erro `40001`.
+- Comparação (custo, contenção, retentativa) nos comentários de `06_transacoes.sql`.
 
-### 3. Administração e operação: em andamento
+### 3. Administração e operação: concluída
 
-- Views (oferta, vagas, histórico) e materialized view de indicadores: **feitas**
-  (`03_views.sql`). A política de atualização está justificada nos comentários do script.
-- Papéis `aluno`, `secretaria` e `coordenacao` com `GRANT`/`REVOKE` e row-level security:
-  **a fazer**.
-- Backup e restauração reproduzíveis: **a fazer**.
+- Views (oferta, vagas, histórico) e materialized view de indicadores, com política de
+  atualização justificada: `03_views.sql`.
+- Papéis `role_aluno`, `role_secretaria` e `role_coordenacao` com `GRANT`/`REVOKE` e
+  row-level security (um aluno só vê o próprio histórico): `07_seguranca.sql`.
+- Backup e restauração reproduzíveis do zero: [`08_backup_restauracao.md`](08_backup_restauracao.md).
 
 ---
 
 ## Notas de uso
 
+- O usuário `aluno` do Docker é **superusuário**. Por isso os papéis de segurança se
+  chamam `role_aluno`, `role_secretaria` e `role_coordenacao`. Os usuários de demonstração
+  (`u_aluno1`, `u_aluno2`, `u_secretaria`, `u_coordenacao`) têm a senha `demo123`.
 - **Os ids não voltam atrás num `ROLLBACK`.** A numeração automática (identity) continua
   de onde parou, então os ids exatos podem diferir entre ambientes. Os testes de
   `EXPLAIN` usam, por exemplo, `id_aluno = 25120`; confira o id com
