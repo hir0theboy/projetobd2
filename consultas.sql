@@ -1,4 +1,4 @@
-Junção externa com agregação:
+--Junção externa com agregação:
 SELECT d.codigo_disciplina, d.nome_disciplina,
 count(DISTINCT t.id_turma) AS qtd_turmas,
 count(m.id_matricula) AS qtd_matriculas
@@ -8,7 +8,7 @@ LEFT JOIN tb_matricula m ON m.id_turma = t.id_turma
 GROUP BY d.id_disciplina, d.codigo_disciplina, d.nome_disciplina
 ORDER BY qtd_matriculas DESC;
 
-Recursiva: pré-requisitos diretos e indiretos:
+--Recursiva: pré-requisitos diretos e indiretos:
 WITH RECURSIVE cadeia AS (
 SELECT pr.id_requisito, 1 AS nivel,
 ARRAY[pr.id_disciplina, pr.id_requisito] AS caminho
@@ -26,7 +26,7 @@ FROM cadeia c JOIN tb_disciplina d ON d.id_disciplina = c.id_requisito
 GROUP BY d.id_disciplina, d.codigo_disciplina, d.nome_disciplina
 ORDER BY nivel, d.codigo_disciplina;
 
-Recursiva: disciplinas liberadas para um aluno:
+--Recursiva: disciplinas liberadas para um aluno:
 WITH RECURSIVE
 aprovadas AS (
 SELECT DISTINCT t.id_disciplina
@@ -48,8 +48,6 @@ SELECT cd.periodo, d.codigo_disciplina, d.nome_disciplina
 FROM tb_aluno a
 JOIN curriculo_disciplina cd ON cd.id_curriculo = a.id_curriculo
 JOIN tb_disciplina d ON d.id_disciplina = cd.id_disciplina
-Roteiro de estudo: arguição BD2 (15 perguntas)
-Page 17 of 24
 WHERE a.id_aluno = 1
 AND d.id_disciplina NOT IN (SELECT id_disciplina FROM aprovadas)
 AND NOT EXISTS (
@@ -58,7 +56,7 @@ WHERE rt.id_disciplina = d.id_disciplina
 AND rt.id_requisito NOT IN (SELECT id_disciplina FROM aprovadas))
 ORDER BY cd.periodo, d.codigo_disciplina;
 
-Função de janela: ranking e percentil:
+--Função de janela: ranking e percentil:
 WITH media_aluno AS (
 SELECT a.id_aluno, a.id_curso, a.nome_aluno,
 round(avg(h.media_final), 2) AS media_geral
@@ -77,7 +75,7 @@ FROM media_aluno ma
 JOIN tb_curso c ON c.id_curso = ma.id_curso
 ORDER BY c.codigo_curso, posicao;
 
-Função de janela com LAG:
+--Função de janela com LAG:
 WITH media_periodo AS (
 SELECT m.id_aluno, p.ano_periodo_letivo, p.semestre,
 round(avg(h.media_final), 2) AS media
@@ -94,7 +92,7 @@ FROM media_periodo
 WINDOW w AS (PARTITION BY id_aluno ORDER BY ano_periodo_letivo, semestre)
 ORDER BY id_aluno, ano_periodo_letivo, semestre;
 
-Consultas de reforço:
+--Consultas de reforço:
 -- HAVING: turmas com mais de 2 matriculados (o filtro é sobre o grupo, por
 isso não é WHERE)
 SELECT d.nome_disciplina, t.id_turma, COUNT(*) AS matriculados
